@@ -56,19 +56,28 @@ class SentryFullStory {
         // getCurrentSessionURL isn't available until after the FullStory script is fully bootstrapped.
         // If an error occurs before getCurrentSessionURL is ready, make a note in Sentry and move on.
         // More on getCurrentSessionURL here: https://help.fullstory.com/develop-js/getcurrentsessionurl
+        let fullStoryUrl;
+        try {
+          fullStoryUrl = FullStory.getCurrentSessionURL(true) || 'current session URL API not ready';
+        } catch(err) {
+          fullStoryUrl = 'current session URL API not ready'
+        }
+
         event.contexts = {
           ...event.contexts,
           fullStory: {
-            fullStoryUrl:
-              FullStory.getCurrentSessionURL(true) ||
-              'current session URL API not ready',
+            fullStoryUrl,
           },
         };
-        // FS.event is immediately ready even if FullStory isn't fully bootstrapped
-        FullStory.event('Sentry Error', {
-          sentryUrl: getSentryUrl(),
-          ...util.getOriginalExceptionProperties(hint),
-        });
+
+        try {
+          FullStory.event('Sentry Error', {
+            sentryUrl: getSentryUrl(),
+            ...util.getOriginalExceptionProperties(hint),
+          });
+        } catch (err) {
+          console.warn('SentryFullStory error', err);
+        }
       }
       return event;
     });
